@@ -116,8 +116,6 @@ def game_loop():
     thing_width = 100
     thing_height = 100
 
-    thingCount = 1
-
     dodged = 0 
 
     gameExit = False
