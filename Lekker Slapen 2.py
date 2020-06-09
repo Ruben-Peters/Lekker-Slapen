@@ -29,15 +29,7 @@ thingImg = pygame.image.load('minion.png')
 
 background = pygame.image.load('background.png')
 
-def things_dodged(count):
-    font = pygame.font.SysFont(None, 25)
-    text = font.render("Dodged: "+str(count), True, white)
-    gameDisplay.blit(text,(0,0))
-
-def things(thingx, thingy, thingw, thingh, color):
-    gameDisplay.blit(thingImg, (thingx,thingy))
-    
-    #pygame.draw.rect(gameDisplay, color, [thingx, thingy, thingw, thingh])
+bulletImg = pygame.image.load('bullet.png')
 
 def car(x,y):
     gameDisplay.blit(carImg, (x,y))
@@ -46,22 +38,22 @@ def text_objects(text, font):
     textSurface = font.render(text, True, white)
     return textSurface, textSurface.get_rect()
 
-def message_display(text):
+def message_crash(text):
     largeText = pygame.font.Font('freesansbold.ttf',100)
     TextSurf, TextRect = text_objects(text, largeText)
     TextRect.center = ((display_width/2),(display_height/2))
     gameDisplay.blit(TextSurf, TextRect)
     pygame.display.update()
     time.sleep(2)
-    game_loop()
+    game_intro()
 
 def crash():
-    message_display('Lekker Slapen')
+    message_crash('Lekker Slapen')
 
 def button(msg,x,y,w,h,ic,ac,action=None):
     mouse = pygame.mouse.get_pos()
     click = pygame.mouse.get_pressed()
-    print(click)
+    #print(click)
 
     if x+w > mouse[0] > x and y+h > mouse[1] > y:
         pygame.draw.rect(gameDisplay, ac,(x,y,w,h))
@@ -76,10 +68,29 @@ def button(msg,x,y,w,h,ic,ac,action=None):
     textRect.center = ( (x+(w/2)), (y+(h/2)) )
     gameDisplay.blit(textSurf, textRect)
 
-
 def quitgame():
     pygame.quit()
     quit()
+
+########################################################
+## Specific enemy for SLAPEN Game
+def things_dodged(count):
+    font = pygame.font.SysFont(None, 25)
+    text = font.render("Dodged: "+str(count), True, white)
+    gameDisplay.blit(text,(0,0))
+
+def things(thingx, thingy, thingw, thingh, color):
+    gameDisplay.blit(thingImg, (thingx,thingy))
+
+
+########################################################
+## ENEMY for WINTERSLAAP Game
+enemyImg = thingImg
+
+def enemy(enemy_X, enemy_Y):
+    gameDisplay.blit(enemyImg, (enemy_X, enemy_Y))
+
+#def fire_bullet(x,y)
 
 def game_intro():
 
@@ -94,11 +105,12 @@ def game_intro():
         gameDisplay.fill(black)
         largeText = pygame.font.Font('freesansbold.ttf', 90)
         TextSurf, TextRect = text_objects("League of Slapen", largeText)
-        TextRect.center = ((display_width/2), (display_height/2))
+        TextRect.center = ((display_width/2), ((display_height/2)-100))
         gameDisplay.blit(TextSurf, TextRect)
         
-        button("Start", 150,450,100,50, green,bright_green, game_loop)
-        button("Quit", 550,450,100,50, red,bright_red, quitgame)
+        button("Slapen", ((display_width/2) - 75),320,150,50, green,bright_green, game_loop)
+        button("Winterslaap", ((display_width/2) - 75),400,150,50, green,bright_green, game_loop2)
+        button("Quit", ((display_width/2) - 75),500,150,50, red,bright_red, quitgame)
 
         pygame.display.update()
         clock.tick(15)
@@ -110,11 +122,12 @@ def game_loop():
 
     x_change = 0
 
-    thing_startx = random.randrange(0, display_width)
-    thing_starty = -600
+    ## ENEMY voor Slapen
+    thing_starty = -500
     thing_speed = 4
     thing_width = 100
-    thing_height = 100
+    thing_height = 80    
+    thing_startx = random.randrange(0, (display_width - thing_width))
 
     dodged = 0 
 
@@ -150,12 +163,14 @@ def game_loop():
         car(x,y)
         things_dodged(dodged)
 
-        if x  > display_width - car_width or x < 0:
-            crash()
+        if x  >= (display_width - car_width):
+            x = (display_width - car_width)
+        if x <= 0:
+            x = 0
 
         if thing_starty > display_height:
             thing_starty = 0 - thing_height
-            thing_startx = random.randrange(0,display_width)
+            thing_startx = random.randrange(0, (display_width - thing_width))
             dodged += 1
             thing_speed += 1
             #thing_width += (dodged *1.1)
@@ -167,10 +182,80 @@ def game_loop():
                 #print('x crossover')
                 crash()
 
+
+        pygame.display.update()
+        clock.tick(60)
+
+
+def game_loop2():
+    x = (display_width * 0.45)
+    y = (display_height * 0.8)
+
+    x_change = 0
+
+    ## Enemy parameters
+    enemy_width = 100
+    enemy_height = 80   
+    enemy_X = random.randint(0, display_width)
+    enemy_Y = random.randint(10, 120)
+    enemy_X_change = 2
+    enemy_Y_change = 40
+
+    ## Bullet 
+    # ready state: it is not shown
+    # fire state: bullet is currently moving
+    bullet_X = 0
+    bullet_Y = (display_height * 0.8)
+    bullet_Y_change = 40
+    bullet_state = "ready"
+
+    gameExit = False
+
+    while not gameExit:
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_LEFT:
+                    x_change = -5
+                elif event.key == pygame.K_RIGHT:
+                    x_change = 5
+            
+            if event.type == pygame.KEYUP:
+                if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
+                    x_change = 0
+       
+        gameDisplay.fill(white)
+
+        gameDisplay.blit(background,(0,0))
+
+        enemy_X += enemy_X_change
+
+        car(x,y)
+        enemy(enemy_X, enemy_Y)
+
+        #making sure Teemo does not go out of the boundaries
+        x += x_change
+
+        if x  >= (display_width - car_width):
+            x = (display_width - car_width)
+        if x <= 0:
+            x = 0
+        
+        #Minions movement
+        if enemy_X  <= 0:
+            enemy_X_change = 2
+            enemy_Y += enemy_Y_change
+        if enemy_X >= (display_width - enemy_width):
+            enemy_X_change = -2
+            enemy_Y += enemy_Y_change
+
+
+
         pygame.display.update()
         clock.tick(60)
 
 game_intro()
-game_loop()
-pygame.quit()
-quit()
