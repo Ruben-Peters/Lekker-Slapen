@@ -1,6 +1,7 @@
 import pygame
 import time
 import random
+import math
 
 pygame.init()
 
@@ -15,8 +16,6 @@ blue = (0,0,255)
 bright_red = (255,0,0)
 bright_green = (0,255,0)
 
-block_color = (53,115,255)
-
 car_width = 80
 
 gameDisplay = pygame.display.set_mode((display_width,display_height))
@@ -24,12 +23,15 @@ pygame.display.set_caption('League of Slapen')
 clock = pygame.time.Clock()
 
 carImg = pygame.image.load('teemo4.png')
-
 thingImg = pygame.image.load('minion.png')
 
 background = pygame.image.load('background.png')
-
 bulletImg = pygame.image.load('bullet.png')
+
+enemyImg = []
+num_of_enemies = 6
+for i in range(num_of_enemies):
+    enemyImg.append(pygame.image.load('minion.png'))
 
 def car(x,y):
     gameDisplay.blit(carImg, (x,y))
@@ -85,13 +87,27 @@ def things(thingx, thingy, thingw, thingh, color):
 
 ########################################################
 ## ENEMY for WINTERSLAAP Game
-enemyImg = thingImg
+def enemy(enemy_X, enemy_Y, i):
+    gameDisplay.blit(enemyImg[i], (enemy_X, enemy_Y))
 
-def enemy(enemy_X, enemy_Y):
-    gameDisplay.blit(enemyImg, (enemy_X, enemy_Y))
+def fire_bullet(x,y):
+    global bullet_state
+    bullet_state = "fire"
+    gameDisplay.blit(bulletImg, (x+18,y+10))
 
-#def fire_bullet(x,y)
+def isCollision(enemy_X, enemy_Y, bullet_X, bullet_Y):
+    distance = math.sqrt((math.pow(enemy_X - bullet_X,2)) + (math.pow(enemy_Y - bullet_Y,2)))
+    if distance < 50:
+        return True
+    else:
+        return False
 
+def score(countscore):
+    font = pygame.font.SysFont(None, 25)
+    text = font.render("Score: "+str(countscore), True, white)
+    gameDisplay.blit(text,(0,0))
+
+# game intro loop
 def game_intro():
 
     intro = True
@@ -109,7 +125,7 @@ def game_intro():
         gameDisplay.blit(TextSurf, TextRect)
         
         button("Slapen", ((display_width/2) - 75),320,150,50, green,bright_green, game_loop)
-        button("Winterslaap", ((display_width/2) - 75),400,150,50, green,bright_green, game_loop2)
+        button("Slapen 2", ((display_width/2) - 75),400,150,50, green,bright_green, game_loop2)
         button("Quit", ((display_width/2) - 75),500,150,50, red,bright_red, quitgame)
 
         pygame.display.update()
@@ -153,8 +169,6 @@ def game_loop():
 
         x += x_change
 
-        gameDisplay.fill(white)
-
         gameDisplay.blit(background,(0,0))
 
         things(thing_startx, thing_starty, thing_width, thing_height, black)
@@ -184,7 +198,7 @@ def game_loop():
 
 
         pygame.display.update()
-        clock.tick(60)
+        clock.tick(30)
 
 
 def game_loop2():
@@ -193,49 +207,60 @@ def game_loop2():
 
     x_change = 0
 
+    countscore = 0
+
     ## Enemy parameters
     enemy_width = 100
     enemy_height = 80   
-    enemy_X = random.randint(0, display_width)
-    enemy_Y = random.randint(10, 120)
-    enemy_X_change = 2
-    enemy_Y_change = 40
+
+
+    enemy_X = []
+    enemy_Y = []
+    enemy_X_change = []
+    enemy_Y_change = []
+
+    for i in range(num_of_enemies):
+        enemy_X.append(random.randint(0, (display_width - enemy_width - 1)))
+        enemy_Y.append(random.randint(10, 120))
+        enemy_X_change.append(4)
+        enemy_Y_change.append(40)
+    
 
     ## Bullet 
     # ready state: it is not shown
     # fire state: bullet is currently moving
     bullet_X = 0
-    bullet_Y = (display_height * 0.8)
-    bullet_Y_change = 40
+    bullet_Y = 480
+    bullet_Y_change = 15
+    global bullet_state
     bullet_state = "ready"
 
     gameExit = False
 
     while not gameExit:
 
+        gameDisplay.blit(background,(0,0))
+        score(countscore)
+        car(x,y)
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 quit()
-
+            # if key is pressed, see which key, and perform appropriate action
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_LEFT:
                     x_change = -5
                 elif event.key == pygame.K_RIGHT:
                     x_change = 5
-            
+                elif event.key == pygame.K_SPACE:
+                    if bullet_state is "ready":
+                        bullet_X = x
+                        fire_bullet(bullet_X, bullet_Y)
+                
             if event.type == pygame.KEYUP:
                 if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
                     x_change = 0
-       
-        gameDisplay.fill(white)
-
-        gameDisplay.blit(background,(0,0))
-
-        enemy_X += enemy_X_change
-
-        car(x,y)
-        enemy(enemy_X, enemy_Y)
 
         #making sure Teemo does not go out of the boundaries
         x += x_change
@@ -246,16 +271,43 @@ def game_loop2():
             x = 0
         
         #Minions movement
-        if enemy_X  <= 0:
-            enemy_X_change = 2
-            enemy_Y += enemy_Y_change
-        if enemy_X >= (display_width - enemy_width):
-            enemy_X_change = -2
-            enemy_Y += enemy_Y_change
+        for i in range(num_of_enemies):
+            enemy_X[i] += enemy_X_change[i]
+            if enemy_X[i]  <= 0:
+                enemy_X_change[i] = enemy_X_change[i]*-1   #4
+                enemy_Y[i] += enemy_Y_change[i]
+            if enemy_X[i] >= (display_width - enemy_width):
+                enemy_X_change[i] = enemy_X_change[i]*-1   #-4
+                enemy_Y[i] += enemy_Y_change[i]
+
+            collision = isCollision(enemy_X[i], enemy_Y[i], bullet_X, bullet_Y)
+            if collision == True:
+                bullet_Y= 480
+                bullet_state = "ready"
+                countscore += 1
+                enemy_X[i] = random.randint(0, (display_width- enemy_width - 1))
+                enemy_Y[i] = random.randint(10, 120)
+                
+                if enemy_X_change[i] < 0:
+                    enemy_X_change[i] -=1
+                else:
+                    enemy_X_change[i] +=1 ##
 
 
+            enemy(enemy_X[i], enemy_Y[i],i)
+            if y < enemy_Y[i]+enemy_height:
+                crash()
+
+        #Bullet movement
+        if bullet_Y <= 0:
+            bullet_Y = 480
+            bullet_state = "ready"
+
+        if bullet_state is "fire":
+            fire_bullet(bullet_X,bullet_Y)
+            bullet_Y -= bullet_Y_change        
 
         pygame.display.update()
-        clock.tick(60)
+        clock.tick(30)
 
 game_intro()
